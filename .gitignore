@@ -1,0 +1,23 @@
+# Local settings and search history
+bot_config.json
+seen_vacancies.txt
+channels.txt
+.env
+.env.*
+!.env.example
+
+# Python and PyInstaller output
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+*.exe
+
+# Alternate implementations and manual network checks
+/bot.py
+/job_hunter_bot.py
+/modern_app.py
+/test_bot.py
+/test_tg.py
