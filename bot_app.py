@@ -47,6 +47,17 @@ DEFAULT_TG_CHANNELS = [
     "alfacareer",
     "internships_ru",
     "data_jobs",
+    "juniors_rabota_jobs",
+    "theypaygood",
+    "analitiki_rabota",
+    "yuniorapp",
+    "young_june",
+    "juno_jobs",
+    "offersanalysis",
+    "datajob",
+    "data_vacancy",
+    "runello_rus_datascience",
+    "junior_vacancies",
 ]
 
 # ================= ФИЛЬТРЫ И СПИСКИ СЛОВ =================
@@ -760,6 +771,204 @@ def check_hirify(seen_ids, token, chat_id, api_url, log_fn):
 # ================= ПАРСЕР TELEGRAM-КАНАЛОВ =================
 
 
+TG_DATA_ROLE = re.compile(
+    r"\b(?:data (?:analyst|analytics|engineer)|analytics engineer|"
+    r"аналити(?:к\w*|ка) (?:по\s+)?данн\w*|(?:дата|bi)[ -]+аналитик\w*|аналитик\w* bi|"
+    r"инженер\w* данн\w*|(?:bi|sql|dwh|etl)[ -]+(?:аналитик\w*|разработчик\w*|developer|engineer|analyst)|"
+    r"(?:разработчик\w*|инженер\w*)[ -]+(?:sql|bi|dwh|etl|баз данн\w*))\b"
+)
+TG_OTHER_ROLE = re.compile(
+    r"\b(?:(?:системн\w*|бизнес|продуктов\w*|финансов\w*)[ -]+аналитик\w*|"
+    r"(?:system|business|product|financial) analyst|data scientist|"
+    r"backend|front[ -]?end|full[ -]?stack|devops|qa|ux|ui|smm|дизайнер\w*|"
+    r"тестировщик\w*|продаж\w*|маркетолог\w*|рекрутер\w*|бухгалтер\w*|"
+    r"репетитор\w*|курьер\w*|копирайтер\w*|колл[ -]центр\w*)\b"
+)
+TG_ENTRY_GRADE = re.compile(
+    r"\b(?:junior|intern(?:ship)?|trainee|джун\w*|стажер\w*|стажировк\w*|"
+    r"младш\w*|начинающ\w*|начальн\w* уров\w*)\b"
+)
+TG_ENTRY_EXPERIENCE = re.compile(
+    r"\b(?:без опыта|no experience|от\s+\d{1,2}\s+месяц\w*|"
+    r"от\s+(?:1|одного)\s+года|до\s+(?:1\s+)?года|0\s*[-–—]\s*1\s+год\w*)\b"
+)
+TG_HIGH_GRADE = re.compile(
+    r"\b(?:middle|mid-level|senior|lead|team[ -]?lead|principal|head|"
+    r"м[ие]дд?л\w*|с[еи]ньор\w*|лид|ведущ\w*|старш\w*|руководител\w*)\b"
+)
+TG_REQUIRED_EXPERIENCE = re.compile(
+    r"\b(?:опыт(?:а| работы)?\s*(?::\s*)?(?:(?:от|минимум|не менее)\s+)?|"
+    r"(?:от|минимум|не менее|at least|minimum)\s+)"
+    r"(?:[2-9]|\d{2,}|двух|трех|четырех|пяти)\s*(?:-?(?:х|ти)|\+)?\s*(?:лет|год\w*|years?)\b|"
+    r"\b(?:[2-9]|\d{2,})(?:\s*\+|\s*[-–—]\s*\d+)\s*(?:лет|год\w*|years?)\b|"
+    r"\b(?:[2-9]|\d{2,})\s+years?\s+(?:of\s+)?(?:professional\s+)?experience\b"
+)
+TG_VACANCY = re.compile(
+    r"\b(?:ваканси\w*|отклик\w*|ищем|нанимаем|работодатель|компания\s*:|"
+    r"обязанност\w*|требовани\w*|зарплат\w*|з/п|что нужно делать|задачи|"
+    r"чем предстоит заниматься|присылай\w* резюме|apply|hiring|salary|requirements|responsibilities)\b"
+)
+TG_AD = re.compile(
+    r"\b(?:подборка|дайджест|вакансии недели|вебинар\w*|буткемп\w*|"
+    r"марафон\w*|мастер[ -]класс\w*|курс(?:ы|а|е|ом)?|интенсив\w*|"
+    r"конференци\w*|хакатон\w*|партнерский пост|реклама|"
+    r"ищу работу|ищу стажировку)\b"
+)
+TG_SPB = re.compile(
+    r"\b(?:санкт[ -]петербург\w*|петербург\w*|спб|питер\w*|st\.?\s+petersburg)\b"
+)
+TG_REMOTE = re.compile(r"\b(?:удален(?:н\w*|к\w*)|дистанционн\w*|remote|anywhere)\b")
+TG_NO_REMOTE = re.compile(
+    r"\b(?:без удален\w*|не удален\w*|удален\w*\s+(?:нет|не (?:предусмотрен\w*|возможн\w*))|"
+    r"no remote|remote\s+(?:unavailable|not available))\b"
+)
+TG_PART_TIME = re.compile(
+    r"\b(?:подработк\w*|неполн\w*\s+(?:рабоч\w*\s+)?(?:день|недел\w*)|"
+    r"частичн\w* занятост\w*|проектн\w*\s+(?:занятост\w*|работ\w*)|"
+    r"part[ -]time|фриланс\w*|полставки|"
+    r"(?:[1-9]|[12]\d|30)\s+час\w*\s+в\s+недел\w*)\b"
+)
+TG_NO_PART_TIME = re.compile(
+    r"\b(?:только полн\w+\s+(?:занятост\w*|рабоч\w+\s+день)|"
+    r"частичн\w* занятост\w*\s+не\s+(?:предусмотрен\w*|рассматрива\w*|возможн\w*))\b"
+)
+TG_PART_TIME_WORK = re.compile(
+    r"\b(?:ввод\w* данн\w*|занос\w* данн\w*|размет\w*\s+(?:данн\w*|текст\w*|изображени\w*)|"
+    r"оператор\w*\s+(?:пк|баз\w* данн\w*)|data (?:entry|labeling|annotation)|"
+    r"разметчик\w*|асессор\w*|транскриб\w*|(?:ai|ии)[ -]+тренер\w*|"
+    r"(?:заполня\w*|заполн\w*|вести|ведение|обновля\w*|обновлен\w*|обрабатыва\w*)"
+    r"\s+(?:excel[ -]+)?(?:таблиц\w*|данн\w*)|(?:excel|google sheets)[ -]+(?:оператор|специалист))\b"
+)
+TG_ASSISTANT = re.compile(r"\b(?:оператор\w*|ассистент\w*|помощник\w*|подработк\w*)\b")
+TG_SALES = re.compile(
+    r"\b(?:холодн\w*\s+звонк\w*|обзвон\w*|телемаркет\w*|"
+    r"активн\w*\s+продаж\w*|привлечени\w*\s+клиент\w*)\b"
+)
+TG_TAG = re.compile(r"(?<!\w)#[\w.]+")
+TG_FOOTER = re.compile(r"(?im)^\s*(?:[—─━➖-][—─━➖\s-]{2,}|[^\w\n]*разместить вакансию)\s*$")
+TG_ROUNDUP = re.compile(r"\b(?:подборка|дайджест|вакансии (?:недели|в\b))")
+TG_BULLET = re.compile(r"(?m)^[ \t]*[-•][ \t]+")
+TG_LOCATION_FIELD = re.compile(
+    r"^\W*(?:город|локация|формат(?: работы| стажировки)?|место работы|location|work format)\s*:"
+)
+TG_GRADE_FIELD = re.compile(r"^\W*(?:грейд|уровень|grade|level)\s*:")
+TG_OFFICE = re.compile(r"\b(?:офис\w*|гибрид\w*|office|hybrid|on[ -]site)\b")
+TG_REMOTE_OFFER = re.compile(
+    r"\b(?:можно\s+(?:работать\s+)?удален\w*|возможн\w*\s+удален\w*|"
+    r"удален\w+\s+(?:формат|работа)|fully remote)\b"
+)
+
+
+def telegram_posts(page):
+    blocks = re.split(
+        r'<div\b[^>]*\bclass="[^"]*(?<![\w-])tgme_widget_message(?![\w-])[^"]*"'
+        r'[^>]*\bdata-post="(\w+/\d+)"[^>]*>',
+        page,
+    )
+    for post_id, block in zip(blocks[1::2], blocks[2::2]):
+        match = re.search(
+            r'class="[^"]*\btgme_widget_message_text\b[^"]*"[^>]*>(.*?)</div>',
+            block,
+            re.DOTALL,
+        )
+        if match:
+            body = re.sub(r"<br\s*/?>", "\n", match.group(1), flags=re.IGNORECASE)
+            yield post_id, html.unescape(re.sub(r"<[^>]*>", "", body))
+
+
+def telegram_listings(text):
+    text = TG_FOOTER.split(text, maxsplit=1)[0].strip()
+    if not text:
+        return
+    header = text.splitlines()[0].lower().replace("ё", "е")
+    if not TG_ROUNDUP.search(header):
+        yield text
+        return
+
+    for section in re.split(r"\n\s*\n", text)[1:]:
+        if "│" in section:
+            continue
+        context, *items = TG_BULLET.split(section)
+        if not items:
+            yield section
+            continue
+
+        context = context.strip().lower().replace("ё", "е")
+        location = context if TG_SPB.search(context) or TG_REMOTE.search(context) else ""
+        if not location and TG_REMOTE.search(header) and not TG_OFFICE.search(context):
+            location = "Удалённо"
+        level = f"{header} {context}"
+        for item in items:
+            if location:
+                yield f"{item.strip()}\nФормат: {location}\nГрейд: {level}\nВакансия"
+
+
+def telegram_vacancy_type(text):
+    lines = [
+        " ".join(line.lower().replace("ё", "е").split())
+        for line in text.splitlines()
+        if line.strip() and "│" not in line
+    ]
+    if not lines:
+        return None
+
+    # A generic vacancy label can precede the actual job title.
+    title = next(
+        (
+            line for line in lines[:4]
+            if not line.startswith("#")
+            and not re.fullmatch(r"\W*(?:вакансия|стажировка|работа|подработка)\W*", line)
+        ),
+        lines[0],
+    )
+    title = title.replace("_", " ")
+    if TG_AD.search(title) or TG_OTHER_ROLE.search(title):
+        return None
+
+    body = "\n".join(TG_TAG.sub(" ", line).replace("_", " ") for line in lines)
+    if not TG_VACANCY.search(body) or TG_REQUIRED_EXPERIENCE.search(body):
+        return None
+    grade_lines = [line for line in lines if TG_GRADE_FIELD.match(line)]
+    grade = "\n".join([title, *grade_lines])
+    if TG_HIGH_GRADE.search(grade):
+        return None
+
+    locations = [line for line in lines if TG_LOCATION_FIELD.match(line)]
+    if not locations:
+        locations = [line for line in lines[:5] if not line.startswith("#")]
+    location_text = "\n".join(locations)
+    tags = " ".join(TG_TAG.findall("\n".join(lines))).replace("_", " ")
+    remote = bool(
+        TG_REMOTE.search(location_text)
+        or TG_REMOTE_OFFER.search(body)
+        or (TG_REMOTE.search(tags) and not TG_OFFICE.search(location_text))
+    )
+    remote = remote and not TG_NO_REMOTE.search(body)
+    # Office-only openings are relevant in Saint Petersburg.
+    spb = bool(TG_SPB.search(location_text))
+    if not (remote or spb):
+        return None
+
+    generic_analyst = re.search(r"\b(?:аналитик\w*|analyst)\b", title) and re.search(
+        r"\b(?:sql|power bi|datalens|tableau|qlik)\b", body
+    )
+    entry = TG_ENTRY_GRADE.search(grade) or TG_ENTRY_GRADE.search(tags) or TG_ENTRY_EXPERIENCE.search(body)
+    if (TG_DATA_ROLE.search(title) or generic_analyst) and entry:
+        return "data"
+
+    relevant_tasks = TG_PART_TIME_WORK.search(title) or (
+        TG_ASSISTANT.search(title) and TG_PART_TIME_WORK.search(body)
+    )
+    if (
+        remote
+        and TG_PART_TIME.search(body)
+        and relevant_tasks
+        and not (TG_SALES.search(body) or TG_NO_PART_TIME.search(body))
+    ):
+        return "part_time"
+    return None
+
+
 def check_tg(seen_ids, token, chat_id, api_url, log_fn):
     channels = get_channels()
     found = 0
@@ -769,75 +978,54 @@ def check_tg(seen_ids, token, chat_id, api_url, log_fn):
         preview_url = f"https://t.me/s/{channel}"
         try:
             resp = requests.get(preview_url, headers=HEADERS, timeout=8)
-            if resp.status_code != 200:
+            resp.raise_for_status()
+        except requests.RequestException:
+            log_fn(f"[TG @{channel}] Не удалось загрузить предпросмотр.")
+            continue
+
+        posts = list(telegram_posts(resp.text))
+        if not posts:
+            log_fn(f"[TG @{channel}] Нет доступных постов в предпросмотре.")
+        for post_id, text in posts:
+            if not is_running:
+                return
+            unique_id = f"tg_{post_id.replace('/', '_')}"
+            if unique_id in seen_ids:
                 continue
 
-            blocks = re.findall(
-                r'<div class="[^"]*tgme_widget_message\b[^>]*data-post="([^"]+)"[^>]*>(.*?)(?=<div class="[^"]*tgme_widget_message\b|$)',
-                resp.text,
-                re.DOTALL,
+            matches = [
+                (listing, vacancy_type)
+                for listing in telegram_listings(text)
+                if (vacancy_type := telegram_vacancy_type(listing))
+            ]
+            if not matches:
+                continue
+
+            badge = (
+                "📢 <b>[TG-ВАКАНСИЯ] Аналитика данных / SQL / BI</b>"
+                if any(vacancy_type == "data" for _, vacancy_type in matches)
+                else "☕ <b>[TG-ПОДРАБОТКА] Данные / Таблицы / ИИ</b>"
             )
-            for post_id, block_html in reversed(blocks):
-                unique_id = f"tg_{post_id.replace('/', '_')}"
-                if unique_id in seen_ids:
-                    continue
+            post_link = f"https://t.me/{post_id}"
+            snippets = [
+                listing if len(listing) <= 600 else listing[:600] + "…"
+                for listing, _ in matches[:3]
+            ]
+            snippet = "\n\n".join(snippets)
 
-                text_match = re.search(
-                    r'class="[^"]*tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>',
-                    block_html,
-                    re.DOTALL,
-                )
-                if not text_match:
-                    continue
-
-                clean_text = clean_text_block(text_match.group(1), max_len=600)
-                t_lower = clean_text.lower()
-
-                if any(b in t_lower for b in BANNED_ROLES):
-                    continue
-                if any(bad in t_lower for bad in SENIOR_STOP_WORDS):
-                    continue
-                if any(bad in t_lower for bad in PART_TIME_BANNED):
-                    continue
-
-                loc_ok, _ = is_valid_geo(clean_text, clean_text)
-                if not loc_ok:
-                    continue
-
-                has_entry = any(k in t_lower for k in ENTRY_KEYWORDS)
-                is_data = any(
-                    k in t_lower for k in DATA_ROLES_WHITELIST
-                ) and has_entry
-                is_pt = any(
-                    w in t_lower for w in PART_TIME_WHITELIST
-                ) and any(x in t_lower for x in ["удален", "подработк", "неполный день"])
-
-                if not (is_data or is_pt):
-                    continue
-
-                seen_ids.add(unique_id)
+            log_fn(f"[TG @{channel}] Найдено совпадение!")
+            msg = (
+                f"{badge}\n"
+                f"<i>Канал: @{channel}</i>\n\n"
+                f"{html.escape(snippet)}\n\n"
+                f"🔗 <a href='{post_link}'>Открыть пост в Telegram</a>"
+            )
+            if send_telegram(token, chat_id, msg, log_fn, api_url):
                 save_seen_id(unique_id)
+                seen_ids.add(unique_id)
                 found += 1
-
-                badge = (
-                    "📢 <b>[TG-СТАЖИРОВКА] Аналитика данных / SQL / BI</b>"
-                    if is_data
-                    else "☕ <b>[TG-ПОДРАБОТКА] Данные / Таблицы / ИИ</b>"
-                )
-                post_link = f"https://t.me/{post_id}"
-
-                log_fn(f"[TG @{channel}] Найдено совпадение!")
-                msg = (
-                    f"{badge}\n"
-                    f"<i>Канал: @{channel}</i>\n\n"
-                    f"{clean_text}\n\n"
-                    f"🔗 <a href='{post_link}'>Открыть пост в Telegram</a>"
-                )
-                send_telegram(token, chat_id, msg, log_fn, api_url)
-                time.sleep(1.5)
-        except Exception:
-            pass
-    log_fn(f"[TG-Каналы] 10 каналов проверено (новых: {found})")
+            time.sleep(1.5)
+    log_fn(f"[TG-Каналы] Источников: {len(channels)}, отправлено: {found}")
 
 
 # ================= ФОНОВЫЙ ПОТОК =================
@@ -845,7 +1033,7 @@ def check_tg(seen_ids, token, chat_id, api_url, log_fn):
 
 def bot_worker(token, chat_id, api_url, log_fn, on_stop_fn):
     global is_running
-    log_fn("Бот успешно запущен! Сканирую: hh.ru, Хабр, Hirify, 10 TG-каналов.")
+    log_fn("Бот запущен. Источники: hh.ru, Хабр, Hirify и Telegram.")
     seen = load_seen_ids()
 
     while is_running:
@@ -1046,7 +1234,7 @@ class JobHunterApp:
         # ТЕРМИНАЛ ЛОГОВ
         log_frame = tk.LabelFrame(
             root,
-            text=" Журнал работы (hh.ru • Хабр • Hirify • 10 TG) ",
+            text=" Журнал работы (hh.ru • Хабр • Hirify • Telegram) ",
             font=("Segoe UI", 9, "bold"),
             fg="#94a3b8",
             bg=self.panel_bg,
